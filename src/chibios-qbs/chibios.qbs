@@ -14,19 +14,24 @@ Project {
         }
     }
 
-    StaticLibrary {
-        name: "chibios"
+    Product {
+        name: "ch_headers"
 
         Export {
             Depends { name: 'cpp' }
-            Depends { name: 'os_common' }
-            Depends { name: 'config' }
-            Depends { name: 'hal' }
-
             cpp.includePaths: [
-                project.CH_PATH + "os/rt/include",
-                project.CH_PATH + "os/oslib/include"
+                project.CH_PATH + "/os/rt/include",
+                project.CH_PATH + "/os/oslib/include",
             ]
+
+        }
+    }
+
+    Product {
+        name: "ch_source"
+
+        Export {
+            Depends { name: 'cpp' }
 
             Group {
                 name: "rt"
@@ -45,23 +50,39 @@ Project {
                     "include/*.h"
                 ]
             }
-            Group {
-                name: "various"
-                prefix: project.CH_PATH + "/os/various/"
-                files: [
-                    "syscalls.c"
-                ]
-            }
         }
     }
 
-    Product {
+    StaticLibrary {
+        name: "chibios"
+
+        Depends { name: 'cpp' }
+        Depends { name: 'os_common' }
+        Depends { name: 'config' }
+        Depends { name: 'hal' }
+        Depends { name: 'ch_headers' }
+        Depends { name: 'ch_source' }
+
+        Export {
+            Depends { name: 'cpp' }
+            Depends { name: 'os_common' }
+            Depends { name: 'hal' }
+            Depends { name: 'ch_headers' }
+        }
+    }
+
+    StaticLibrary {
         name: "hal"
 
         Depends { name: 'cpp' }
+        Depends { name: 'config' }
+        Depends { name: 'ch_headers' }
+        Depends { name: 'ch_source' }
+        Depends { name: 'os_common' }
+        Depends { name: 'license' }
 
-        property string halPath: FileInfo.joinPaths(project.sourceDirectory, "ChibiOS/os/hal/")
-        property string portPath: "ports/STM32"
+        property string halPath: FileInfo.joinPaths(project.CH_PATH, "os/hal/")
+        property string portPath: FileInfo.joinPaths(halPath, "ports/STM32")
         property pathList lldPaths: lldGetter.paths
 
         property pathList includePaths: [
@@ -151,10 +172,15 @@ Project {
 
     }
 
-    Product {
+    StaticLibrary {
         name: "os_common"
 
-        property string commonPath: FileInfo.joinPaths(project.sourceDirectory, "ChibiOS/os/common/")
+        Depends { name: 'cpp' }
+        Depends { name: 'ch_headers' }
+        Depends { name: 'config' }
+        Depends { name: 'license' }
+
+        property string commonPath: FileInfo.joinPaths(project.CH_PATH, "os/common/")
         property string LD_SCRIPTS_PATH: FileInfo.joinPaths(commonPath, "startup/ARMCMx/compilers/GCC/ld/")
 
         property string ARCH: {
@@ -186,29 +212,28 @@ Project {
             ]
 
             cpp.includePaths: [
-                "portability/GCC",
-                "startup/ARMCMx/compilers/GCC",
-                "startup/ARMCMx/devices/" + exportingProduct.MCU_FAMILY,
-                "ext/ARM/CMSIS/Core/Include",
-                "ext/ST/" + exportingProduct.MCU_FAMILY,
-                "ports/ARM-common",
-                "ports/" + exportingProduct.ARCH
+                exportingProduct.commonPath + "portability/GCC",
+                exportingProduct.commonPath + "startup/ARMCMx/compilers/GCC",
+                exportingProduct.commonPath + "startup/ARMCMx/devices/" + exportingProduct.MCU_FAMILY,
+                exportingProduct.commonPath + "ext/ARM/CMSIS/Core/Include",
+                exportingProduct.commonPath + "ext/ST/" + exportingProduct.MCU_FAMILY,
+                exportingProduct.commonPath + "ports/ARM-common",
+                exportingProduct.commonPath + "ports/" + exportingProduct.ARCH
             ]
-
         }
 
-        Depends { name: "cpp" }
-        Depends { name: "config" }
-        Depends { name: "license" }
+        cpp.libraryPaths: [
+            LD_SCRIPTS_PATH
+        ]
 
         cpp.includePaths: [
-            "portability/GCC",
-            "startup/ARMCMx/compilers/GCC",
-            "startup/ARMCMx/devices/" + MCU_FAMILY,
-            "ext/ARM/CMSIS/Core/Include",
-            "ext/ST/" + MCU_FAMILY,
-            "ports/ARM-common",
-            "ports/" + ARCH
+            commonPath + "portability/GCC",
+            commonPath + "startup/ARMCMx/compilers/GCC",
+            commonPath + "startup/ARMCMx/devices/" + MCU_FAMILY,
+            commonPath + "ext/ARM/CMSIS/Core/Include",
+            commonPath + "ext/ST/" + MCU_FAMILY,
+            commonPath + "ports/ARM-common",
+            commonPath + "ports/" + ARCH,
         ]
 
         Group {
@@ -231,7 +256,7 @@ Project {
 
         Group {
             name: "arch specific"
-            prefix: FileInfo.joinPaths(commonPath, "ports", ARCH,"/")
+            prefix: FileInfo.joinPaths(commonPath, "ports", ARCH, "/")
             files: [
                 "compilers/GCC/chcoreasm.S",
                 "chcore.c",
@@ -254,15 +279,15 @@ Project {
             fileTags: ["linkerscript"]
             files: [ project.MCU + ".ld"]
         }
+
     }
 
     Product {
         name: "license"
-        property string licensePath: FileInfo.joinPaths(project.sourceDirectory, "ChibiOS/os/license/")
 
         Export {
             Depends { name: "cpp" }
-            cpp.includePaths: exportingProduct.licensePath
+            cpp.includePaths: FileInfo.joinPaths(project.CH_PATH, "os/license/")
         }
 
         files: [
