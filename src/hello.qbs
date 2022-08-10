@@ -56,11 +56,8 @@ Project {
             ]
 
             cpp.positionIndependentCode: false
-            cpp.debugInformation: true
-            cpp.generateLinkerMapFile: true
             cpp.enableExceptions: false
             cpp.enableRtti: false
-            cpp.optimization: "none"
 
             Group {
                 name: "Config"
@@ -71,6 +68,21 @@ Project {
                     "chconf.h"
                 ]
             }
+
+            Properties {
+                condition: qbs.buildVariant === "release"
+                cpp.debugInformation: false
+                cpp.optimization: "small"
+            }
+
+            Properties {
+                condition: qbs.buildVariant !== "release"
+                cpp.debugInformation: true
+                cpp.generateLinkerMapFile: true
+                cpp.optimization: "none"
+            }
+
+            cpp.optimization: "none"
         }
     }
 
